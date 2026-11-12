@@ -1,5 +1,7 @@
 # dsh-fold-delete
 
+[中文](README.md) · DeepSeek Harness plugin · MIT
+
 Collapse older messages in long chats, and permanently delete sessions.
 
 ## Fold
