@@ -65,3 +65,9 @@ restart. No data is left behind.
 ## License
 
 MIT © 2026 困困
+
+---
+
+## About AIGC
+
+> This project contains AIGC (AI-generated) content. AI shortened development time; every line of code was carefully reviewed.
