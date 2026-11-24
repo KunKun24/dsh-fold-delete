@@ -17,6 +17,7 @@ window.__ModuleLoader__.load({
     const DANGER = 'var(--dsw-alias-state-error-primary, #ff5c5c)';
     const DANGER_HOVER = 'color-mix(in srgb, var(--dsw-alias-state-error-primary, #ff5c5c) 12%, transparent)';
     const LABEL_TERTIARY = 'var(--dsw-alias-label-tertiary, #8b93a7)';
+    const LABEL_PRIMARY = 'var(--dsw-alias-label-primary, #1a2332)';
 
     /* ------------------------------------------------------------------ *
      * settings store (localStorage: dsh-fold-delete)
@@ -405,11 +406,14 @@ window.__ModuleLoader__.load({
     function RowDeleteButton(props) {
       const id = sessionIdOf(props);
       if (!id) return null;
+      /* 与官方 Rows.module.css `.iconButton` 完全一致：24×24、margin -4、14px 图标、
+         hover 只做 tertiary → primary 的文字色过渡（无红字、无背景色），
+         focus-visible 用 -2px 的内缩焦点环。 */
       const base = {
-        width: 24, height: 24, margin: -4, padding: 0, border: 0, flex: 'none',
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 24, height: 24, margin: -4, padding: 0, border: 0, boxSizing: 'border-box',
         borderRadius: 'var(--dsw-radius-xs, 6px)', background: 'transparent',
-        color: LABEL_TERTIARY, cursor: 'pointer',
+        color: LABEL_TERTIARY, cursor: 'pointer', outlineOffset: '-2px',
       };
       return h('button', {
         type: 'button',
@@ -417,12 +421,10 @@ window.__ModuleLoader__.load({
         'aria-label': '删除会话',
         style: base,
         onMouseEnter: (e) => {
-          e.currentTarget.style.color = DANGER;
-          e.currentTarget.style.background = DANGER_HOVER;
+          e.currentTarget.style.color = LABEL_PRIMARY;
         },
         onMouseLeave: (e) => {
           e.currentTarget.style.color = LABEL_TERTIARY;
-          e.currentTarget.style.background = 'transparent';
         },
         onClick: (e) => {
           e.stopPropagation();

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.1 — 2026-11-24
+
+行内删除按钮的 hover 样式与官方图标按钮统一。
+
+### 修复
+
+- 悬停时不再变成红色图标 + 红色底（与侧边栏官方的收纳 / 图钉按钮不一致，显得突兀）；
+  现在和官方 `Rows.module.css .iconButton` 完全一致：hover 只做 `--dsw-alias-label-tertiary`
+  → `--dsw-alias-label-primary` 的文字色过渡，无背景色
+- 补齐官方同款 `focus-visible` 内缩焦点环（`outline-offset: -2px`）与 `box-sizing: border-box`
+
 ## 1.2.0 — 2026-11-24
 
 适配 DSH 0.2.3 的新侧边栏，并修掉「删了刷新又回来」。
