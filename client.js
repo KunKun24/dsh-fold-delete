@@ -11,9 +11,12 @@ window.__ModuleLoader__.load({
     const MAX_COUNT = 200;
     const DEFAULT_COUNT = 20;
 
-    const MUTED = 'var(--dsw-alias-text-secondary, #8b93a7)';
-    const LINE = 'var(--dsw-alias-border-secondary, rgba(128,128,128,.22))';
+    const MUTED = 'var(--dsw-alias-label-secondary, #8b93a7)';
+    const LINE = 'var(--dsw-alias-border-l, rgba(128,128,128,.22))';
     const BRAND = 'var(--dsw-alias-brand-primary, #4d6bfe)';
+    const DANGER = 'var(--dsw-alias-state-error-primary, #ff5c5c)';
+    const DANGER_HOVER = 'color-mix(in srgb, var(--dsw-alias-state-error-primary, #ff5c5c) 12%, transparent)';
+    const LABEL_TERTIARY = 'var(--dsw-alias-label-tertiary, #8b93a7)';
 
     /* ------------------------------------------------------------------ *
      * settings store (localStorage: dsh-fold-delete)
@@ -302,25 +305,19 @@ window.__ModuleLoader__.load({
      * 删除会话（来自 dsh-session-tools）
      * ------------------------------------------------------------------ */
 
-    const DANGER = 'var(--dsw-alias-state-error-primary, #ff5c5c)';
-
-    /* 主题探测：dsh 没有 --dsw-alias-bg-primary 这个变量，原来的写法永远落到深色兜底，
-       导致浅色模式下弹窗是黑一块。这里直接看页面真实背景亮度来选配色。 */
+    /* 配色全部走 DSH 主题 token：主题切换（浅色 / 深色 / 跟随系统）时自动跟着变，
+       不再写死两套色板。fallback 只是 token 缺失时的兜底。 */
     function theme() {
-      let dark = true;
-      try {
-        const bg = getComputedStyle(document.body).backgroundColor;
-        const m = bg && bg.match(/\d+(\.\d+)?/g);
-        if (m && m.length >= 3) {
-          const lum = 0.299 * +m[0] + 0.587 * +m[1] + 0.114 * +m[2];
-          dark = lum < 140;
-        } else {
-          dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        }
-      } catch (e) {}
-      return dark
-        ? { card: '#1b2029', text: '#e9eef8', muted: '#9aa4b8', line: 'rgba(255,255,255,.12)', mask: 'rgba(0,0,0,.55)', shadow: '0 24px 60px rgba(0,0,0,.55)' }
-        : { card: '#ffffff', text: '#1a2332', muted: '#5b6678', line: 'rgba(16,24,40,.12)', mask: 'rgba(16,24,40,.30)', shadow: '0 18px 48px rgba(16,24,40,.18)' };
+      return {
+        card: 'var(--dsw-alias-bg-layer-2, #ffffff)',
+        text: 'var(--dsw-alias-label-primary, #1a2332)',
+        muted: 'var(--dsw-alias-label-secondary, #5b6678)',
+        line: 'var(--dsw-alias-border-l, rgba(16,24,40,.12))',
+        mask: 'var(--dsw-alias-bg-mask-1, rgba(0,0,0,.32))',
+        blur: 'var(--dsw-mask-blur, blur(2px))',
+        shadow: 'var(--dsw-elevation-prominent, 0 18px 48px rgba(16,24,40,.18))',
+        radius: 'var(--dsw-radius-lg, 14px)',
+      };
     }
 
     const dialogListeners = new Set();
@@ -391,7 +388,7 @@ window.__ModuleLoader__.load({
       const id = sessionIdOf(props);
       return h('button', {
         type: 'button', role: 'menuitem', style: dangerStyle,
-        onMouseEnter: (e) => { e.currentTarget.style.background = 'rgba(255,92,92,.1)'; },
+        onMouseEnter: (e) => { e.currentTarget.style.background = DANGER_HOVER; },
         onMouseLeave: (e) => { e.currentTarget.style.background = 'transparent'; },
         onClick: () => {
           setMenuOpen(false);
@@ -401,6 +398,38 @@ window.__ModuleLoader__.load({
         icon(['M3 6h18', 'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2', 'M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6'], 14),
         h('span', null, '删除会话')
       );
+    }
+
+    /* 新版侧边栏没有 ⋮ 菜单，行尾（hover 时）直接给一个删除按钮。
+       props 由 sidebar.workspaces.session.row.action 的 owner share 提供：{ sessionId, displayTitle }。 */
+    function RowDeleteButton(props) {
+      const id = sessionIdOf(props);
+      if (!id) return null;
+      const base = {
+        width: 24, height: 24, margin: -4, padding: 0, border: 0, flex: 'none',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        borderRadius: 'var(--dsw-radius-xs, 6px)', background: 'transparent',
+        color: LABEL_TERTIARY, cursor: 'pointer',
+      };
+      return h('button', {
+        type: 'button',
+        title: '删除会话',
+        'aria-label': '删除会话',
+        style: base,
+        onMouseEnter: (e) => {
+          e.currentTarget.style.color = DANGER;
+          e.currentTarget.style.background = DANGER_HOVER;
+        },
+        onMouseLeave: (e) => {
+          e.currentTarget.style.color = LABEL_TERTIARY;
+          e.currentTarget.style.background = 'transparent';
+        },
+        onClick: (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          openDialog({ id, title: props.displayTitle || id });
+        },
+      }, icon(['M3 6h18', 'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2', 'M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6', 'M10 11v6', 'M14 11v6'], 14));
     }
 
 
@@ -453,19 +482,19 @@ window.__ModuleLoader__.load({
       return h('div', {
         style: {
           position: 'fixed', inset: 0, zIndex: 2147483001,
-          background: th.mask, display: 'flex',
-          alignItems: 'center', justifyContent: 'center', padding: 20,
+          background: th.mask, backdropFilter: th.blur, WebkitBackdropFilter: th.blur,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
         },
         onClick: close,
       },
         h('div', {
           onClick: stop,
           style: {
-            width: '100%', maxWidth: 420, borderRadius: 18, padding: '24px 24px 20px',
+            width: '100%', maxWidth: 420, borderRadius: th.radius, padding: '22px 22px 18px',
             background: th.card,
             border: '1px solid ' + th.line, color: th.text,
             boxShadow: th.shadow,
-            fontFamily: '-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif',
+            fontFamily: 'inherit',
           },
         },
           h('div', { style: { fontSize: 16.5, fontWeight: 600, marginBottom: 10, color: DANGER, letterSpacing: '.2px' } }, '删除会话'),
@@ -488,16 +517,18 @@ window.__ModuleLoader__.load({
             h('button', {
               type: 'button', onClick: close,
               style: {
-                height: 36, padding: '0 18px', borderRadius: 10, cursor: 'pointer',
+                height: 34, padding: '0 16px', borderRadius: 'var(--dsw-radius-sm, 8px)', cursor: 'pointer',
                 border: '1px solid ' + th.line, background: 'transparent', color: th.text, fontSize: 13,
+                fontFamily: 'inherit',
               },
             }, '取消'),
             h('button', {
               type: 'button', onClick: confirm, disabled: !ack || busy,
               style: {
-                height: 36, padding: '0 18px', borderRadius: 10, border: 0, fontSize: 13,
+                height: 34, padding: '0 16px', borderRadius: 'var(--dsw-radius-sm, 8px)', border: 0, fontSize: 13,
                 cursor: ack && !busy ? 'pointer' : 'not-allowed',
-                background: DANGER, color: '#fff', fontWeight: 600,
+                background: DANGER, color: '#fff', fontWeight: 500,
+                fontFamily: 'inherit',
                 opacity: ack && !busy ? 1 : 0.45,
               },
             }, busy ? '删除中…' : '确认删除')
@@ -811,26 +842,48 @@ window.__ModuleLoader__.load({
      * plugin entry
      * ------------------------------------------------------------------ */
 
+    /* 某个插槽在当前 DSH 版本里不存在时，inject 可能直接抛错；
+       这里吞掉，让插件在其它版本上仍能注册剩下的插槽。 */
+    function safeInject(ctx, name, factory) {
+      try {
+        ctx.slots.inject(name, factory);
+      } catch (e) {
+        try {
+          console.warn('[dsh-fold-delete] slot unavailable:', name, e && e.message);
+        } catch (_) {}
+      }
+    }
+
     function apply(ctx) {
       startRuntime();
 
-      ctx.slots.inject('sidebar.panellist', () =>
+      safeInject(ctx, 'sidebar.panellist', () =>
         ctx.slots.register(
           { name: 'sidebar.panellist', id: NS, order: 16, locale: NS, label: () => '对话设置' },
           Icon,
         ),
       );
-      ctx.slots.inject('main', () =>
+      safeInject(ctx, 'main', () =>
         ctx.slots.register({ name: 'main', key: NS, locale: NS }, Panel),
       );
 
-      ctx.slots.inject('sidebar.workspaces.session.menu.item', () =>
+      /* 旧版：右键菜单里的一行（0.2.2 及更早的 ⋮ 菜单） */
+      safeInject(ctx, 'sidebar.workspaces.session.menu.item', () =>
         ctx.slots.register(
           { name: 'sidebar.workspaces.session.menu.item', id: 'fold-delete-session', order: 510 },
           DeleteItem,
         ),
       );
-      ctx.slots.inject('shell.overlay', () =>
+
+      /* 新版：会话行 hover 时行尾的图标按钮（0.2.3+ 没有了 ⋮ 菜单） */
+      safeInject(ctx, 'sidebar.workspaces.session.row.action', () =>
+        ctx.slots.register(
+          { name: 'sidebar.workspaces.session.row.action', id: 'fold-delete-row', order: 510 },
+          RowDeleteButton,
+        ),
+      );
+
+      safeInject(ctx, 'shell.overlay', () =>
         ctx.slots.register({ name: 'shell.overlay', id: 'fold-delete-dialog' }, () =>
           h(React.Fragment, null, h(Dialog), h(Toaster)),
         ),

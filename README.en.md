@@ -16,23 +16,44 @@ button at the top of the conversation reveals one more batch, or everything.
 
 ## Delete
 
-Session context menu → "删除会话" → tick the confirmation → the session is gone.
+The entry point follows the DSH version; one build covers both UIs:
 
-Four steps, in order:
+- **0.2.3+**: hover a session row in the sidebar — a trash button appears at the end of
+  the row (the new sidebar has no "..." menu at all)
+- **0.2.2 and earlier**: session context menu → "删除会话"
 
-1. stop a possibly running session (`flush` + `dispose`)
-2. remove the session directory (both `session-<uuid>` and bare `<uuid>` layouts)
-3. drop it from the workspace index (`workspace.json`: archived / pinned / per-workspace)
-4. emit `api-session/removed` so the list refreshes
+Click it, tick the confirmation in the dialog, then "确认删除". Deletion does this:
 
-Nothing is recoverable, which is why the API requires `confirm: true` and the UI
-asks twice.
+1. stop a running agent and flush its buffered events
+2. detach the session from the host in-memory store, which emits `session/disposed`;
+   the official session controller turns that into `api-session/removed` — **skip this
+   step and the session comes back on the next reload**
+3. remove the session directory (both `session-<uuid>` and bare `<uuid>` layouts). The
+   persistence writer closes asynchronously, so the plugin waits for it to go quiet and
+   deletes a second time when needed
+4. drop the projection cache at `storages/session_projcache/sessions/<id>.json`
+5. drop it from `workspace.json`: archived, pinned and every workspace's `sessionIds`
+6. prune parent directories that became empty
+
+Nothing is recoverable, which is why the API requires `confirm: true` and the UI asks
+twice.
 
 ## Theming
 
-The dialog samples the real page background brightness instead of relying on
-`--dsw-alias-bg-primary` (that variable does not exist in the Harness theme, and
-referencing it silently falls back to the dark palette).
+The dialog, the row button and the settings panel use Harness theme tokens
+(`--dsw-alias-bg-layer-2`, `--dsw-alias-label-primary/secondary/tertiary`,
+`--dsw-alias-border-l`, `--dsw-alias-bg-mask-1`, `--dsw-mask-blur`,
+`--dsw-elevation-prominent`, `--dsw-radius-*`, `--dsw-alias-state-error-primary`), so
+light, dark and system themes all follow automatically — no hard-coded palettes.
+
+## Compatibility
+
+| DSH | Delete entry | Slot used |
+| --- | --- | --- |
+| 0.2.3+ | Trash button on row hover | `sidebar.workspaces.session.row.action` |
+| 0.2.0 – 0.2.2 | Session context menu | `sidebar.workspaces.session.menu.item` |
+
+Both slots are registered and a missing one is skipped safely (`engines.dsh: >=0.2.0`).
 
 ## Install
 
@@ -43,7 +64,7 @@ Search for `dsh-fold-delete` in the Harness plugin marketplace and install it.
 ### Release tarball
 
 ```bash
-dsh plugin --profile web add ./dsh-fold-delete-1.0.0.tgz
+dsh plugin --profile web add ./dsh-fold-delete-1.2.0.tgz
 ```
 
 ### Manual

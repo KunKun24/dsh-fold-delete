@@ -53,11 +53,16 @@ function dropFromWorkspace(id) {
     }
   }
   const tables = doc.tables || {};
-  for (const wsId of Object.keys(tables)) {
-    const ws = tables[wsId];
-    if (ws && Array.isArray(ws.sessionIds) && ws.sessionIds.includes(id)) {
-      ws.sessionIds = ws.sessionIds.filter((x) => x !== id);
-      changed = true;
+  // 当前布局是 tables.workspaces[wsId]；老布局直接把工作区放在 tables 下面，两种都走一遍
+  const buckets = [tables];
+  if (tables.workspaces && typeof tables.workspaces === 'object') buckets.push(tables.workspaces);
+  for (const bucket of buckets) {
+    for (const wsId of Object.keys(bucket)) {
+      const ws = bucket[wsId];
+      if (ws && Array.isArray(ws.sessionIds) && ws.sessionIds.includes(id)) {
+        ws.sessionIds = ws.sessionIds.filter((x) => x !== id);
+        changed = true;
+      }
     }
   }
   if (changed) {
@@ -67,18 +72,110 @@ function dropFromWorkspace(id) {
   }
 }
 
-async function deleteSession(ctx, id) {
-  // 1. 停掉可能正在运行的会话
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/* 会话在 host 内存里时，只删磁盘上的文件没用：会话列表优先列出 live 会话，
+   刷新后它还会出现。这里拿 store 条目自带的 detach 闭包，既移出内存 store，
+   也派发 session/disposed —— 官方的 api-session/removed 就挂在这个事件上。 */
+function liveEntryOf(sessions, id) {
   try {
-    const sessions = ctx.get('sessions');
-    if (sessions && typeof sessions.get === 'function') {
-      const live = sessions.get(id);
-      if (live) {
-        if (typeof sessions.flush === 'function') await sessions.flush(live).catch(() => {});
-        if (typeof live.dispose === 'function') await live.dispose().catch(() => {});
+    const store = sessions && sessions.store;
+    if (!store || typeof store.get !== 'function') return null;
+    const entry = store.get(id);
+    if (entry && typeof entry.detach === 'function') return entry;
+  } catch {}
+  return null;
+}
+
+async function detachLive(ctx, id) {
+  const sessions = ctx.get('sessions');
+  if (!sessions || typeof sessions.get !== 'function') return false;
+  let session;
+  try {
+    session = sessions.get(id);
+  } catch {}
+  const entry = liveEntryOf(sessions, id);
+  if (!session && !entry) return false;
+
+  // 正在跑的 agent 先停下，避免 detach 之后它继续往日志里写
+  try {
+    const agents = ctx.get('agents');
+    const agent = agents && typeof agents.get === 'function' ? agents.get(id) : undefined;
+    if (agent && typeof agent.cancel === 'function') {
+      agent.cancel({ kind: 'user' });
+      if (typeof agent.whenIdle === 'function') {
+        await Promise.race([agent.whenIdle(), sleep(600)]);
       }
     }
   } catch {}
+
+  // 先让缓冲的事件落盘，避免 detach 之后 writer 关闭时又补写一遍
+  if (session && typeof sessions.flush === 'function') {
+    try {
+      await sessions.flush(session);
+    } catch {}
+  }
+  if (entry) {
+    try {
+      entry.detach();
+      return true;
+    } catch {}
+  }
+  // 老版本 DSH 在会话对象上暴露 dispose()
+  if (session && typeof session.dispose === 'function') {
+    try {
+      await session.dispose();
+      return true;
+    } catch {}
+  }
+  return false;
+}
+
+/**
+ * 等持久化 writer 关闭：session/disposed 的 close() 是异步的，
+ * 立刻删目录会跟它抢，文件可能被写回来。轮询 mtime 直到稳定。
+ */
+async function waitQuiet(dirs, timeout = 1500) {
+  const deadline = Date.now() + timeout;
+  let last = '';
+  let stable = 0;
+  while (Date.now() < deadline) {
+    let stamp = '';
+    for (const dir of dirs) {
+      try {
+        stamp += dir + ':' + Math.round(fs.statSync(dir).mtimeMs) + ';';
+      } catch {
+        stamp += dir + ':missing;';
+      }
+    }
+    if (stamp === last) {
+      stable += 1;
+      if (stable >= 2) return;
+    } else {
+      stable = 0;
+      last = stamp;
+    }
+    await sleep(60);
+  }
+}
+
+function removeDirs(dirs) {
+  let removed = 0;
+  let bytes = 0;
+  for (const dir of dirs) {
+    try {
+      if (!fs.existsSync(dir)) continue;
+      bytes += dirSize(dir);
+      fs.rmSync(dir, { recursive: true, force: true });
+      removed += 1;
+    } catch {}
+  }
+  return { removed, bytes };
+}
+
+async function deleteSession(ctx, id) {
+  // 1. 把会话从 host 内存 store 里摘掉（这一步决定了刷新后会不会回来）
+  const wasLive = await detachLive(ctx, id);
 
   // 2. 删除会话目录（兼容 session-<uuid> 与裸 <uuid> 两种命名）
   const bare = String(id).replace(/^session-/, '');
@@ -89,14 +186,15 @@ async function deleteSession(ctx, id) {
       if (!dirs.includes(d)) dirs.push(d);
     }
   }
-  let removed = 0;
-  let bytes = 0;
-  for (const dir of dirs) {
-    try {
-      bytes += dirSize(dir);
-      fs.rmSync(dir, { recursive: true, force: true });
-      removed += 1;
-    } catch {}
+  if (dirs.length) await waitQuiet(dirs);
+
+  let { removed, bytes } = removeDirs(dirs);
+  // writer 关闭可能晚一步把文件写回来，再补一刀并确认
+  if (wasLive && dirs.length) {
+    await sleep(180);
+    const again = removeDirs(dirs);
+    removed += again.removed;
+    bytes += again.bytes;
   }
 
   // 3. 删除投影缓存
@@ -115,11 +213,32 @@ async function deleteSession(ctx, id) {
   for (const candidate of ids) dropFromWorkspace(candidate);
 
   // 5. 通知前端列表刷新
-  try {
-    ctx.emit('api-session/removed', id);
-  } catch {}
+  //    detach 已经派发过 session/disposed，新的 host 会自己广播 api-session/removed；
+  //    老版本 / 纯冷会话没有这一步，这里补一次（前端把不存在的 id 移除是幂等的）。
+  if (!wasLive) {
+    try {
+      ctx.emit('api-session/removed', id);
+    } catch {}
+  }
 
-  return { removed, bytes };
+  // 6. 顺手清掉被删空的父级目录（工作区 slug 目录）
+  for (const dir of dirs) pruneEmptyParents(dir);
+
+  return { removed, bytes, live: wasLive };
+}
+
+function pruneEmptyParents(dir) {
+  let parent = path.dirname(dir);
+  const root = path.join(home(), 'sessions');
+  while (parent.startsWith(root) && parent !== root) {
+    try {
+      if (fs.readdirSync(parent).length > 0) return;
+      fs.rmdirSync(parent);
+    } catch {
+      return;
+    }
+    parent = path.dirname(parent);
+  }
 }
 
 function dirSize(dir) {

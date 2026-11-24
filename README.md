@@ -16,21 +16,40 @@
 
 ## 删除
 
-会话右键菜单 → 「删除会话」→ 勾选确认 → 永久删除。
+删除入口按 DSH 版本自动切换，同一份代码两种界面都能用：
 
-删除会做四件事：
+- **新版（0.2.3+）**：鼠标移到侧边栏的会话行上，行尾出现垃圾桶按钮（新版侧边栏已经没有 ⋮ 菜单）
+- **旧版（0.2.2 及更早）**：会话右键菜单 →「删除会话」
 
-1. 停掉可能还在跑的会话（flush + dispose）
-2. 删掉会话目录（兼容 `session-<uuid>` 和裸 `<uuid>` 两种命名）
-3. 从 workspace 索引里摘掉
-4. 通知前端刷新列表
+点按钮 → 弹窗里勾选「我已了解」→「确认删除」。删除会做这些事：
+
+1. 停掉正在运行的 agent，把缓冲的消息 flush 到磁盘
+2. 把会话从 host 的内存 store 里摘掉，触发 `session/disposed`，
+   官方 session-controller 据此广播 `api-session/removed` —— **少了这一步，刷新后会话会回来**
+3. 删掉会话目录（兼容 `session-<uuid>` 和裸 `<uuid>` 两种命名）；
+   持久化 writer 是异步关闭的，所以等它安静下来再删，必要时补删第二遍
+4. 删掉投影缓存 `storages/session_projcache/sessions/<id>.json`
+5. 从 `workspace.json` 的 archived / pinned / 每个工作区的 `sessionIds` 里摘掉
+6. 顺手删掉被清空的父级目录
 
 **不可恢复**，所以要求二次确认。
 
 ## 主题适配
 
-弹窗按页面真实背景亮度判断亮/暗配色，浅色下是白卡片、深色下是深卡片。
-（dsh 没有 `--dsw-alias-bg-primary` 这个变量，直接写它会永远落到深色兜底。）
+弹窗、行内按钮和设置面板全部使用 DSH 主题 token
+（`--dsw-alias-bg-layer-2`、`--dsw-alias-label-primary/secondary/tertiary`、
+`--dsw-alias-border-l`、`--dsw-alias-bg-mask-1`、`--dsw-mask-blur`、
+`--dsw-elevation-prominent`、`--dsw-radius-*`、`--dsw-alias-state-error-primary`），
+浅色 / 深色 / 跟随系统切换时自动同步，不再写死两套色板。
+
+## 兼容性
+
+| DSH 版本 | 删除入口 | 用到的插槽 |
+| --- | --- | --- |
+| 0.2.3+ | 会话行 hover 的垃圾桶按钮 | `sidebar.workspaces.session.row.action` |
+| 0.2.0 – 0.2.2 | 会话右键菜单 | `sidebar.workspaces.session.menu.item` |
+
+两个插槽同时注册，当前版本没有的那个会被安全跳过（`engines.dsh: >=0.2.0`）。
 
 ## 安装
 
@@ -41,7 +60,7 @@
 ### 方式二：Release 压缩包
 
 ```bash
-dsh plugin --profile web add ./dsh-fold-delete-1.0.0.tgz
+dsh plugin --profile web add ./dsh-fold-delete-1.2.0.tgz
 ```
 
 ### 方式三：手动装到 profile
