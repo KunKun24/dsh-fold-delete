@@ -8,7 +8,7 @@
 
 长对话只显示最近的消息，不再需要的会话从侧边栏行尾一键彻底删除。
 
-![悬停会话行出现垃圾桶按钮，点开确认弹窗](assets/demo.gif)
+![悬停会话行出现垃圾桶按钮，点开确认弹窗](assets/demo-fold.gif)
 
 > DeepSeek Harness（DSH）插件，需要 DSH 0.2.0 及以上。
 

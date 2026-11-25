@@ -8,7 +8,7 @@
 
 Collapse older messages in long conversations, and permanently delete sessions you no longer need — straight from the sidebar row.
 
-![Hover a session row to reveal the delete button, then the confirmation dialog](assets/demo.gif)
+![Hover a session row to reveal the delete button, then the confirmation dialog](assets/demo-fold.gif)
 
 > A DeepSeek Harness (DSH) plugin for DSH 0.2.0 or newer.
 
