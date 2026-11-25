@@ -1,92 +1,96 @@
-# dsh-fold-delete
+# dsh-fold-delete · 折叠与删除会话
 
-[English](README.en.md) · DeepSeek Harness 插件 · MIT
+[**简体中文**](README.md) · [English](README.en.md)
 
-两件小事：**折叠较早的消息**和**彻底删除一个会话**。
+![version](https://img.shields.io/badge/version-1.2.1-blue)
+![license](https://img.shields.io/badge/license-MIT-2ea44f)
+![dsh](https://img.shields.io/badge/DSH-%E2%89%A50.2.0-6f42c1)
 
-## 折叠
+长对话只显示最近的消息，不再需要的会话从侧边栏行尾一键彻底删除。
 
-打开长对话时只显示最近 N 条（默认 20，可改 5–200），更早的收起来；
-对话顶部会出现一个浮动按钮，点一次多显示一批，也可以「全部展开」。
+![悬停会话行出现垃圾桶按钮，点开确认弹窗](assets/demo.gif)
 
-- 思考过程和工具调用**不计入条数**
-- 只隐藏、不删除：折叠是靠给 DOM 加一个我们自己定义的属性
-  （`data-dsh-fold-delete`）实现的，消息节点仍在，随时可以展开
-- 切换会话、新消息到达后会自动重新计算
+> DeepSeek Harness（DSH）插件，需要 DSH 0.2.0 及以上。
 
-## 删除
+## 它做什么
 
-删除入口按 DSH 版本自动切换，同一份代码两种界面都能用：
+解决两件长对话里最常见的麻烦：
 
-- **新版（0.2.3+）**：鼠标移到侧边栏的会话行上，行尾出现垃圾桶按钮（新版侧边栏已经没有 ⋮ 菜单）
-- **旧版（0.2.2 及更早）**：会话右键菜单 →「删除会话」
+- 老会话几百条消息，每次打开都要从头滚到底 —— 折叠掉早先的部分，只留最近几条
+- 试错留下的垃圾会话越堆越多，而 DSH 原生侧边栏没有删除入口 —— 加一个真正的删除按钮，删完刷新也不会回来
 
-点按钮 → 弹窗里勾选「我已了解」→「确认删除」。删除会做这些事：
+## 功能
 
-1. 停掉正在运行的 agent，把缓冲的消息 flush 到磁盘
-2. 把会话从 host 的内存 store 里摘掉，触发 `session/disposed`，
-   官方 session-controller 据此广播 `api-session/removed` —— **少了这一步，刷新后会话会回来**
-3. 删掉会话目录（兼容 `session-<uuid>` 和裸 `<uuid>` 两种命名）；
-   持久化 writer 是异步关闭的，所以等它安静下来再删，必要时补删第二遍
-4. 删掉投影缓存 `storages/session_projcache/sessions/<id>.json`
-5. 从 `workspace.json` 的 archived / pinned / 每个工作区的 `sessionIds` 里摘掉
-6. 顺手删掉被清空的父级目录
+**折叠较早的消息**
 
-**不可恢复**，所以要求二次确认。
+- 打开长对话只显示最近 N 条（默认 20，可在设置里改成 5–200），更早的收起来
+- 对话顶部出现浮动按钮，点一次多显示一批，也可以「全部展开」
+- 思考过程和工具调用不计入条数
+- 只隐藏、不删除：消息节点仍在页面里，随时展开，不改动任何会话文件
+- 切换会话、新消息到达后自动重新计算
 
-## 主题适配
+**彻底删除会话**
 
-弹窗、行内按钮和设置面板全部使用 DSH 主题 token
-（`--dsw-alias-bg-layer-2`、`--dsw-alias-label-primary/secondary/tertiary`、
-`--dsw-alias-border-l`、`--dsw-alias-bg-mask-1`、`--dsw-mask-blur`、
-`--dsw-elevation-prominent`、`--dsw-radius-*`、`--dsw-alias-state-error-primary`），
-浅色 / 深色 / 跟随系统切换时自动同步，不再写死两套色板。
+- 新版 DSH（0.2.3+）：鼠标移到侧边栏会话行上，行尾出现垃圾桶按钮
+- 旧版 DSH（0.2.0–0.2.2）：会话右键菜单 →「删除会话」
+- 弹窗二次确认（勾选「我已了解」才能点确认），删除不可恢复
+
+删除会依次停掉运行中的 agent、flush 缓冲消息、把会话从内存 store 摘掉并广播 `api-session/removed`、删除会话目录与投影缓存、从 `workspace.json` 的归档/置顶/工作区列表里摘掉 —— 所以刷新后不会再冒出来。
+
+## 安装
+
+**方式一：插件市场（推荐）**
+
+在 DSH 的「插件市场」里搜索 `dsh-fold-delete` 直接安装。
+
+**方式二：Release 包**
+
+```bash
+dsh plugin --profile web add https://github.com/KunKun24/dsh-fold-delete/releases/download/v1.2.1/dsh-fold-delete-1.2.1.tgz
+```
+
+**方式三：本地源码**
+
+```bash
+dsh plugin --profile web add link:/path/to/dsh-fold-delete
+```
+
+装完刷新页面即可，不需要重启 DSH。
+
+## 使用
+
+- **折叠**：打开任意长对话自动生效；顶部浮动按钮可继续展开，设置里可改显示条数
+- **删除**：悬停会话行 → 点垃圾桶 → 勾选确认 → 确认删除
+
+## 配置
+
+侧边栏「更多 → 对话设置」里调整折叠条数、是否启用折叠等选项；设置保存在本机浏览器 `localStorage: dsh-fold-delete`，不上传任何地方。
+
+| 选项 | 默认 | 范围 |
+| --- | --- | --- |
+| 显示最近消息数 | 20 | 5–200 |
 
 ## 兼容性
 
 | DSH 版本 | 删除入口 | 用到的插槽 |
 | --- | --- | --- |
-| 0.2.3+ | 会话行 hover 的垃圾桶按钮 | `sidebar.workspaces.session.row.action` |
-| 0.2.0 – 0.2.2 | 会话右键菜单 | `sidebar.workspaces.session.menu.item` |
+| 0.2.3+ | 会话行悬停的垃圾桶按钮 | `sidebar.workspaces.session.row.action` |
+| 0.2.0–0.2.2 | 会话右键菜单 | `sidebar.workspaces.session.menu.item` |
 
-两个插槽同时注册，当前版本没有的那个会被安全跳过（`engines.dsh: >=0.2.0`）。
+两个插槽同时注册，当前版本不存在的那一个会被安全跳过。
 
-## 安装
+在自带会话行的第三方侧边栏主题（例如 dsh-better-workspace）下同样可用：`row.action` 是官方行内按钮位，会排在「归档」「置顶」右侧。
 
-### 方式一：插件市场（推荐）
+## 数据与隐私
 
-在 dsh 的「插件市场」里搜索包名直接安装。
+- 折叠只在浏览器里改 DOM，不写入任何数据
+- 删除只操作本机会话文件，不发网络请求
+- 插件不收集任何信息，也不上传任何内容
 
-### 方式二：Release 压缩包
+## 版本与作者
 
-```bash
-dsh plugin --profile web add ./dsh-fold-delete-1.2.0.tgz
-```
+- 当前版本 **1.2.1**（[更新日志](CHANGELOG.md)）
+- 作者：困困 · GitHub [@KunKun24](https://github.com/KunKun24) · Telegram [@sad1881](https://t.me/sad1881)
+- 许可证：[MIT](LICENSE)
 
-### 方式三：手动装到 profile
-
-```bash
-# 1. 复制到 profile 的 vendor 目录
-cp -r dsh-fold-delete ~/.dsh/profiles/web/vendor/dsh-fold-delete
-
-# 2. 在 profile 的 package.json 里加一条依赖（file: 指向 vendor）
-#    "dependencies": { "dsh-fold-delete": "file:./vendor/dsh-fold-delete" }
-
-# 3. 装依赖并重启
-cd ~/.dsh/profiles/web && pnpm install && dsh web
-```
-
-## 卸载
-
-从 `package.json` 的 `dependencies` 和 `dsh.profile.bundles` 里删掉 `dsh-fold-delete`，
-再 `pnpm install` 重启即可；插件本身不写任何业务数据。
-
-## 许可证
-
-MIT
-
----
-
-## 关于 AIGC
-
-> 项目包含 AIGC 内容，AI 减少了开发时间；我们也认真审核了每一条代码。
+包含 AIGC 辅助编写的内容，已逐行人工审阅并在真机验证。

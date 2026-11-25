@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- 文档：统一 README 模板（中英双语、assets/demo.gif 演示、功能 / 安装 / 配置 / 限制 / 隐私 / 版本作者）。
+
 ## 1.2.1 — 2026-11-24
 
 行内删除按钮的 hover 样式与官方图标按钮统一。

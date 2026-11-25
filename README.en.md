@@ -1,94 +1,96 @@
-# dsh-fold-delete
+# dsh-fold-delete · Fold & delete sessions
 
-[中文](README.md) · DeepSeek Harness plugin · MIT
+[**简体中文**](README.md) · [English](README.en.md)
 
-Collapse older messages in long chats, and permanently delete sessions.
+![version](https://img.shields.io/badge/version-1.2.1-blue)
+![license](https://img.shields.io/badge/license-MIT-2ea44f)
+![dsh](https://img.shields.io/badge/DSH-%E2%89%A50.2.0-6f42c1)
 
-## Fold
+Collapse older messages in long conversations, and permanently delete sessions you no longer need — straight from the sidebar row.
 
-Long conversations show only the latest N messages (default 20, 5–200). A floating
-button at the top of the conversation reveals one more batch, or everything.
+![Hover a session row to reveal the delete button, then the confirmation dialog](assets/demo.gif)
 
-- Thinking blocks and tool calls are not counted
-- Folding only hides messages: it toggles a `data-dsh-fold-delete` attribute, the
-  nodes stay in the DOM and can be expanded at any time
-- Recalculated when switching sessions or when new messages arrive
+> A DeepSeek Harness (DSH) plugin for DSH 0.2.0 or newer.
 
-## Delete
+## What it does
 
-The entry point follows the DSH version; one build covers both UIs:
+Two everyday annoyances of long-running chats:
 
-- **0.2.3+**: hover a session row in the sidebar — a trash button appears at the end of
-  the row (the new sidebar has no "..." menu at all)
-- **0.2.2 and earlier**: session context menu → "删除会话"
+- A 500-message conversation scrolls forever — fold the older part, keep the recent messages
+- Test sessions pile up and DSH's own sidebar has no delete action — add a real delete button that survives a refresh
 
-Click it, tick the confirmation in the dialog, then "确认删除". Deletion does this:
+## Features
 
-1. stop a running agent and flush its buffered events
-2. detach the session from the host in-memory store, which emits `session/disposed`;
-   the official session controller turns that into `api-session/removed` — **skip this
-   step and the session comes back on the next reload**
-3. remove the session directory (both `session-<uuid>` and bare `<uuid>` layouts). The
-   persistence writer closes asynchronously, so the plugin waits for it to go quiet and
-   deletes a second time when needed
-4. drop the projection cache at `storages/session_projcache/sessions/<id>.json`
-5. drop it from `workspace.json`: archived, pinned and every workspace's `sessionIds`
-6. prune parent directories that became empty
+**Fold older messages**
 
-Nothing is recoverable, which is why the API requires `confirm: true` and the UI asks
-twice.
+- Shows only the most recent N messages (default 20, configurable 5–200)
+- A floating button at the top of the chat reveals more, or all of them
+- Reasoning and tool calls are not counted
+- Hide-only: message nodes stay in the DOM, nothing is written to disk
+- Recomputed when the conversation changes or new messages arrive
 
-## Theming
+**Delete a session for real**
 
-The dialog, the row button and the settings panel use Harness theme tokens
-(`--dsw-alias-bg-layer-2`, `--dsw-alias-label-primary/secondary/tertiary`,
-`--dsw-alias-border-l`, `--dsw-alias-bg-mask-1`, `--dsw-mask-blur`,
-`--dsw-elevation-prominent`, `--dsw-radius-*`, `--dsw-alias-state-error-primary`), so
-light, dark and system themes all follow automatically — no hard-coded palettes.
+- DSH 0.2.3+: hover a session row, a trash icon appears at the end of the row
+- DSH 0.2.0–0.2.2: the session context menu → "Delete session"
+- Confirmation dialog with an "I understand" checkbox; deletion cannot be undone
+
+Deletion stops the running agent, flushes buffered messages, detaches the session from the in-memory store and broadcasts `api-session/removed`, removes the session directory and its projection cache, and cleans `workspace.json` — so it does not come back after a refresh.
+
+## Installation
+
+**Option 1 — plugin marketplace (recommended)**
+
+Search `dsh-fold-delete` in DSH's plugin marketplace.
+
+**Option 2 — release tarball**
+
+```bash
+dsh plugin --profile web add https://github.com/KunKun24/dsh-fold-delete/releases/download/v1.2.1/dsh-fold-delete-1.2.1.tgz
+```
+
+**Option 3 — local source**
+
+```bash
+dsh plugin --profile web add link:/path/to/dsh-fold-delete
+```
+
+Reload the page afterwards; no DSH restart is needed.
+
+## Usage
+
+- **Fold**: open any long conversation; the floating button reveals more, the count is configurable
+- **Delete**: hover a session row → trash icon → tick the checkbox → confirm
+
+## Configuration
+
+Open "More → 对话设置" (chat settings) in the sidebar. Settings live in the local browser (`localStorage: dsh-fold-delete`) and are never uploaded.
+
+| Option | Default | Range |
+| --- | --- | --- |
+| Recent messages shown | 20 | 5–200 |
 
 ## Compatibility
 
-| DSH | Delete entry | Slot used |
+| DSH version | Delete entry | Slot |
 | --- | --- | --- |
-| 0.2.3+ | Trash button on row hover | `sidebar.workspaces.session.row.action` |
-| 0.2.0 – 0.2.2 | Session context menu | `sidebar.workspaces.session.menu.item` |
+| 0.2.3+ | Trash icon on the session row | `sidebar.workspaces.session.row.action` |
+| 0.2.0–0.2.2 | Context menu item | `sidebar.workspaces.session.menu.item` |
 
-Both slots are registered and a missing one is skipped safely (`engines.dsh: >=0.2.0`).
+Both slots are registered; whichever does not exist on the running version is skipped safely.
 
-## Install
+Works with third-party sidebars that re-implement session rows (such as dsh-better-workspace): `row.action` is the official in-row button slot, so the icon lands to the right of "Archive" and "Pin".
 
-### Plugin marketplace
+## Data & privacy
 
-Search for `dsh-fold-delete` in the Harness plugin marketplace and install it.
+- Folding only touches the DOM in your browser
+- Deletion only touches local session files; no network requests are made
+- No telemetry, nothing is uploaded
 
-### Release tarball
+## Version & author
 
-```bash
-dsh plugin --profile web add ./dsh-fold-delete-1.2.0.tgz
-```
+- Version **1.2.1** ([changelog](CHANGELOG.md))
+- Author: 困困 (KunKun) · GitHub [@KunKun24](https://github.com/KunKun24) · Telegram [@sad1881](https://t.me/sad1881)
+- License: [MIT](LICENSE)
 
-### Manual
-
-```bash
-cp -r dsh-fold-delete ~/.dsh/profiles/web/vendor/
-# add to ~/.dsh/profiles/web/package.json
-#   "dependencies": { "dsh-fold-delete": "file:./vendor/dsh-fold-delete" }
-cd ~/.dsh/profiles/web && pnpm install && dsh web
-```
-
-Restart the instance after installing.
-
-## Uninstall
-
-Remove it from `dsh.profile.bundles` and `dependencies`, run `pnpm install` and
-restart. No data is left behind.
-
-## License
-
-MIT © 2026 困困
-
----
-
-## About AIGC
-
-> This project contains AIGC (AI-generated) content. AI shortened development time; every line of code was carefully reviewed.
+Contains AIGC-assisted code, reviewed line by line and verified on a real instance.
