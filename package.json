@@ -1,6 +1,6 @@
 {
   "name": "dsh-fold-delete",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "折叠较早消息 + 彻底删除会话（DeepSeek Harness 插件）",
   "icon": "icon.png",
   "type": "module",
@@ -47,7 +47,7 @@
   },
   "engines": {
     "node": ">=22.13.0",
-    "dsh": ">=0.2.0"
+    "dsh": ">=0.2.0-rc.2"
   },
   "dsh": {
     "bundle": {

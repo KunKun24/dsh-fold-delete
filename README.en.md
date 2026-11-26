@@ -2,15 +2,15 @@
 
 [**简体中文**](README.md) · [English](README.en.md)
 
-![version](https://img.shields.io/badge/version-1.2.1-blue)
+![version](https://img.shields.io/badge/version-1.2.2-blue)
 ![license](https://img.shields.io/badge/license-MIT-2ea44f)
-![dsh](https://img.shields.io/badge/DSH-%E2%89%A50.2.0-6f42c1)
+![dsh](https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.2-6f42c1)
 
 Collapse older messages in long conversations, and permanently delete sessions you no longer need — straight from the sidebar row.
 
 ![Hover a session row to reveal the delete button, then the confirmation dialog](assets/demo-fold.gif)
 
-> A DeepSeek Harness (DSH) plugin for DSH 0.2.0 or newer.
+> A DeepSeek Harness (DSH) plugin for DSH 0.2.0-rc.2 or newer (tested across 0.2.0-rc.2 → 0.2.3).
 
 ## What it does
 
@@ -46,7 +46,7 @@ Search `dsh-fold-delete` in DSH's plugin marketplace.
 **Option 2 — release tarball**
 
 ```bash
-dsh plugin --profile web add https://github.com/KunKun24/dsh-fold-delete/releases/download/v1.2.1/dsh-fold-delete-1.2.1.tgz
+dsh plugin --profile web add https://github.com/KunKun24/dsh-fold-delete/releases/download/v1.2.2/dsh-fold-delete-1.2.2.tgz
 ```
 
 **Option 3 — local source**
@@ -89,7 +89,7 @@ Works with third-party sidebars that re-implement session rows (such as dsh-bett
 
 ## Version & author
 
-- Version **1.2.1** ([changelog](CHANGELOG.md))
+- Version **1.2.2** ([changelog](CHANGELOG.md))
 - Author: 困困 (KunKun) · GitHub [@KunKun24](https://github.com/KunKun24) · Telegram [@sad1881](https://t.me/sad1881)
 - License: [MIT](LICENSE)
 

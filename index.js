@@ -259,6 +259,9 @@ function dirSize(dir) {
 
 
 export function apply(ctx) {
+  // Older or stripped-down hosts may not expose the fetch bridge at all; keep
+  // the sidebar (fold/menu) features working instead of aborting the whole plugin.
+  if (!ctx.connection || typeof ctx.connection.fetch?.register !== 'function') return;
   ctx.effect(() =>
     ctx.connection.fetch.register({
       path: '/api/fold-delete/delete',

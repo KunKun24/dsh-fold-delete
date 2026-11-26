@@ -2,15 +2,15 @@
 
 [**简体中文**](README.md) · [English](README.en.md)
 
-![version](https://img.shields.io/badge/version-1.2.1-blue)
+![version](https://img.shields.io/badge/version-1.2.2-blue)
 ![license](https://img.shields.io/badge/license-MIT-2ea44f)
-![dsh](https://img.shields.io/badge/DSH-%E2%89%A50.2.0-6f42c1)
+![dsh](https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.2-6f42c1)
 
 长对话只显示最近的消息，不再需要的会话从侧边栏行尾一键彻底删除。
 
 ![悬停会话行出现垃圾桶按钮，点开确认弹窗](assets/demo-fold.gif)
 
-> DeepSeek Harness（DSH）插件，需要 DSH 0.2.0 及以上。
+> DeepSeek Harness（DSH）插件，需要 DSH 0.2.0-rc.2 及以上（0.2.0-rc.2 → 0.2.3 全系列实测可用）。
 
 ## 它做什么
 
@@ -46,7 +46,7 @@
 **方式二：Release 包**
 
 ```bash
-dsh plugin --profile web add https://github.com/KunKun24/dsh-fold-delete/releases/download/v1.2.1/dsh-fold-delete-1.2.1.tgz
+dsh plugin --profile web add https://github.com/KunKun24/dsh-fold-delete/releases/download/v1.2.2/dsh-fold-delete-1.2.2.tgz
 ```
 
 **方式三：本地源码**
@@ -74,7 +74,7 @@ dsh plugin --profile web add link:/path/to/dsh-fold-delete
 
 | DSH 版本 | 删除入口 | 用到的插槽 |
 | --- | --- | --- |
-| 0.2.3+ | 会话行悬停的垃圾桶按钮 | `sidebar.workspaces.session.row.action` |
+| 0.2.0-rc.2 起 | 会话行悬停的垃圾桶按钮 | `sidebar.workspaces.session.row.action` |
 | 0.2.0–0.2.2 | 会话右键菜单 | `sidebar.workspaces.session.menu.item` |
 
 两个插槽同时注册，当前版本不存在的那一个会被安全跳过。
@@ -89,7 +89,7 @@ dsh plugin --profile web add link:/path/to/dsh-fold-delete
 
 ## 版本与作者
 
-- 当前版本 **1.2.1**（[更新日志](CHANGELOG.md)）
+- 当前版本 **1.2.2**（[更新日志](CHANGELOG.md)）
 - 作者：困困 · GitHub [@KunKun24](https://github.com/KunKun24) · Telegram [@sad1881](https://t.me/sad1881)
 - 许可证：[MIT](LICENSE)
 
